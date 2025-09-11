@@ -158,4 +158,16 @@ No environment variables required for basic functionality.
 
 ## 📄 License
 
-This project is proprietary software owned by VerifyBox.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+**Copyright (c) 2025 VerifyBox**
+
+## 🔒 Security
+
+This repository contains only frontend code and does not include:
+- API keys or secrets
+- Database configurations
+- Private credentials
+- Sensitive user data
+
+All sensitive information is properly excluded via `.gitignore`.
