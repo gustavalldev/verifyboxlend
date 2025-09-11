@@ -94,7 +94,7 @@ const MobileHeader = ({ activeSection, onSectionChange }) => {
             <button
               onClick={handleMenuToggle}
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
-              aria-label="Открыть меню"
+              aria-label="Open menu"
             >
               <svg
                 className={`w-6 h-6 transition-transform duration-300 ${isMenuOpen ? 'rotate-90' : ''}`}

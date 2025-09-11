@@ -142,7 +142,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
               <svg className={`w-4 h-4 transition-transform duration-300 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
-              <span className={isExpanded ? 'opacity-100' : 'opacity-0'}>Свернуть</span>
+              <span className={isExpanded ? 'opacity-100' : 'opacity-0'}>Collapse</span>
             </button>
           </div>
 
@@ -151,7 +151,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
             isExpanded ? 'opacity-100' : 'opacity-0'
           } sm:opacity-100`}>
             <div className="px-2 sm:px-3 py-1.5 sm:py-2 text-center">
-              <div className="text-xs text-gray-500 mb-1">Версия лендинга</div>
+              <div className="text-xs text-gray-500 mb-1">Landing Version</div>
               <div className="text-xs sm:text-sm font-medium text-gray-700 bg-gray-100 rounded-lg px-2 sm:px-3 py-1 inline-block">
                 v1.0
               </div>

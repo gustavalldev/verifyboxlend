@@ -67,7 +67,7 @@ const StatsCard = ({
       {!loading && typeof value === 'number' && (
         <div className="mt-4 pt-4 border-t border-gray-100 group-hover:border-gray-200 transition-colors duration-300">
           <div className="flex items-center justify-between text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-300">
-            <span>Обновлено</span>
+            <span>Updated</span>
             <span>{new Date().toLocaleTimeString('ru-RU', { 
               hour: '2-digit', 
               minute: '2-digit' 

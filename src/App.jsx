@@ -853,7 +853,7 @@ const App = () => {
                   </div>
                   </div>
                 <div className="mt-3 sm:mt-4 p-2 bg-green-50 rounded text-xs sm:text-sm text-green-700 text-center">
-                  Привычный и быстрый способ
+                  Familiar and fast method
                 </div>
               </div>
               
@@ -879,7 +879,7 @@ const App = () => {
                   </div>
                   </div>
                 <div className="mt-3 sm:mt-4 p-2 bg-blue-50 rounded text-xs sm:text-sm text-blue-700 text-center">
-                  Надежнее и дешевле
+                  More reliable and cheaper
                 </div>
               </div>
               
@@ -1050,17 +1050,17 @@ const App = () => {
                       hoveredMetric === 0 
                         ? 'bg-red-100 text-red-700' 
                         : 'bg-red-100 text-red-700'
-                    }`}>Блокировка подозрительных IP</span>
+                    }`}>Blocking suspicious IPs</span>
                     <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition-all duration-300 ${
                       hoveredMetric === 0 
                         ? 'bg-red-100 text-red-700' 
                         : 'bg-red-100 text-red-700'
-                    }`}>Ограничение запросов на отправку кода</span>
+                    }`}>Rate limiting for code sending</span>
                     <span className={`px-2 sm:px-3 py-1 text-xs sm:text-sm rounded-full transition-all duration-300 ${
                       hoveredMetric === 0 
                         ? 'bg-red-100 text-red-700' 
                         : 'bg-red-100 text-red-700'
-                    }`}>Защита от спамеров</span>
+                    }`}>Spam protection</span>
                   </div>
                 </div>
               </div>
@@ -1432,7 +1432,7 @@ const App = () => {
                   {isCodeSent && !isCodeVerified && (
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1 sm:mb-2">
-                        Код верификации
+                        Verification Code
                       </label>
                       <input
                         type="text"
@@ -1995,7 +1995,7 @@ const App = () => {
                         <svg className="w-4 h-4 inline-block mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7" />
                         </svg>
-                        Функция
+                        Feature
                       </th>
                       <th className="border-b border-gray-200 p-3 text-center font-bold text-sm text-gray-800">
                         Free
