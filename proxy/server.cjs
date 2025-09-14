@@ -43,8 +43,14 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Разрешаем запросы без origin (например, мобильные приложения)
-        if (!origin) return callback(null, true);
+        // Блокируем запросы без origin (только разрешенные домены)
+        if (!origin) {
+            logger.warn(`CORS blocked request without origin`, {
+                ip: req?.ip,
+                userAgent: req?.get('User-Agent')
+            });
+            return callback(new Error('Origin header required'));
+        }
         
         if (allowedOrigins.includes(origin)) {
             return callback(null, true);
@@ -84,7 +90,7 @@ const parseApiKeys = () => {
 
 const validApiKeys = parseApiKeys();
 
-// Простая проверка IP (опционально для дополнительной безопасности)
+// Проверка IP для дополнительной безопасности
 const allowedIPs = process.env.ALLOWED_IPS?.split(',') || [];
 const isIPAllowed = (ip) => {
     if (allowedIPs.length === 0) return true; // Если IP не настроены, разрешаем все
@@ -94,7 +100,7 @@ const isIPAllowed = (ip) => {
     return allowedIPs.includes(cleanIP);
 };
 
-// Middleware для проверки IP (только если настроены IP)
+// Middleware для проверки IP
 const checkIPAccess = (req, res, next) => {
     // Если IP не настроены, пропускаем проверку
     if (allowedIPs.length === 0) return next();
@@ -116,21 +122,32 @@ const checkIPAccess = (req, res, next) => {
     next();
 };
 
-// Middleware для аутентификации (опционально, если настроены API ключи)
+// Middleware для аутентификации API ключами
 const authenticateClient = (req, res, next) => {
-    // Если API ключи не настроены, пропускаем аутентификацию
-    if (Object.keys(validApiKeys).length === 0) {
-        req.clientId = 'no-auth';
-        return next();
-    }
-    
     const authHeader = req.headers.authorization;
     const clientId = req.headers['x-client-id'];
     
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        logger.warn(`Missing authorization header`, {
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            url: req.url
+        });
         return res.status(401).json({
             success: false,
             error: 'Missing or invalid authorization header'
+        });
+    }
+    
+    if (!clientId) {
+        logger.warn(`Missing X-Client-ID header`, {
+            ip: req.ip,
+            userAgent: req.get('User-Agent'),
+            url: req.url
+        });
+        return res.status(401).json({
+            success: false,
+            error: 'Missing X-Client-ID header'
         });
     }
     
@@ -140,7 +157,8 @@ const authenticateClient = (req, res, next) => {
     if (!expectedSecret || token !== expectedSecret) {
         logger.warn(`Unauthorized access attempt from client: ${clientId}`, {
             ip: req.ip,
-            userAgent: req.get('User-Agent')
+            userAgent: req.get('User-Agent'),
+            url: req.url
         });
         return res.status(401).json({
             success: false,
@@ -163,13 +181,14 @@ const sendSmsSchema = Joi.object({
 // Маршруты API
 
 // Проверка здоровья сервера
-app.get('/api/health', (req, res) => {
+app.get('/api/health', checkIPAccess, authenticateClient, (req, res) => {
     res.json({
         success: true,
         message: 'VerifyBox Vonage Proxy Server is running',
         timestamp: new Date().toISOString(),
         version: '1.0.0',
-        landing: 'VerifyBox Landing Page'
+        landing: 'VerifyBox Landing Page',
+        clientId: req.clientId
     });
 });
 
