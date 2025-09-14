@@ -213,7 +213,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         // Отправляем SMS через Vonage
         const result = await clientVonage.sms.send({
             to: phone,
-            from: sender || 'VerifyBox',
+            from: sender || process.env.VONAGE_SENDER || 'VerifyBox',
             text: message,
             ...options
         });

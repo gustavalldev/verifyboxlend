@@ -23,6 +23,7 @@ nano proxy/.env
 PROXY_PORT=3001
 VONAGE_API_KEY=ваш_vonage_api_key
 VONAGE_API_SECRET=ваш_vonage_api_secret
+VONAGE_SENDER=VerifyBox
 PROXY_API_KEYS=verifybox-ru:ваш_очень_сильный_секретный_ключ
 ALLOWED_CLIENTS=verifybox-ru
 LOG_LEVEL=info

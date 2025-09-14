@@ -62,13 +62,28 @@ nano proxy/.env
 PROXY_PORT=3001
 VONAGE_API_KEY=ваш_vonage_api_key
 VONAGE_API_SECRET=ваш_vonage_api_secret
+VONAGE_SENDER=VerifyBox
 PROXY_API_KEYS=verifybox-ru:ваш_очень_сильный_секретный_ключ
 ALLOWED_CLIENTS=verifybox-ru
 LOG_LEVEL=info
 ALLOWED_ORIGINS=https://verifybox.ru,https://www.verifybox.ru
 ```
 
-### 4. Перезапуск сервисов
+### 4. Описание переменных окружения
+
+| Переменная | Описание | Обязательная | По умолчанию |
+|------------|----------|--------------|--------------|
+| `PROXY_PORT` | Порт для прокси-сервера | Нет | `3001` |
+| `VONAGE_API_KEY` | API ключ Vonage | Да | - |
+| `VONAGE_API_SECRET` | API секрет Vonage | Да | - |
+| `VONAGE_SENDER` | Имя отправителя SMS (до 11 символов) | Нет | `VerifyBox` |
+| `PROXY_API_KEYS` | API ключи для аутентификации клиентов | Нет | - |
+| `ALLOWED_CLIENTS` | Разрешенные клиенты | Нет | - |
+| `LOG_LEVEL` | Уровень логирования | Нет | `info` |
+| `ALLOWED_ORIGINS` | Разрешенные домены для CORS | Нет | `https://verifybox.ru,https://www.verifybox.ru` |
+| `ALLOWED_IPS` | Разрешенные IP-адреса (опционально) | Нет | - |
+
+### 5. Перезапуск сервисов
 
 ```bash
 # Перезапуск прокси-сервера
