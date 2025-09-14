@@ -156,10 +156,8 @@ const authenticateClient = (req, res, next) => {
 const sendSmsSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     message: Joi.string().min(1).max(1600).required(),
-    sender: Joi.string().min(1).max(11).optional(),
-    vonageApiKey: Joi.string().required(),
-    vonageApiSecret: Joi.string().required(),
-    options: Joi.object().optional()
+    sender: Joi.string().min(1).max(11).optional()
+    // Убираем vonageApiKey и vonageApiSecret из валидации
 });
 
 // Маршруты API
@@ -189,7 +187,18 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             });
         }
 
-        const { phone, message, sender, vonageApiKey, vonageApiSecret, options } = value;
+        const { phone, message, sender } = value;
+
+        // Используем переменные окружения
+        const vonageApiKey = process.env.VONAGE_API_KEY;
+        const vonageApiSecret = process.env.VONAGE_API_SECRET;
+
+        if (!vonageApiKey || !vonageApiSecret) {
+            return res.status(500).json({
+                success: false,
+                error: 'Vonage API credentials not configured'
+            });
+        }
 
         logger.info(`Sending SMS to ${phone} from client ${req.clientId}`, {
             phone,
@@ -204,8 +213,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             api_secret: vonageApiSecret,
             to: phone,
             from: sender || process.env.VONAGE_SENDER || 'VerifyBox',
-            text: message,
-            ...options
+            text: message
         });
 
         logger.info(`SMS sent successfully`, {
