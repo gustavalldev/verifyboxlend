@@ -82,6 +82,7 @@ ALLOWED_ORIGINS=https://verifybox.ru,https://www.verifybox.ru
 | `LOG_LEVEL` | Уровень логирования | Нет | `info` |
 | `ALLOWED_ORIGINS` | Разрешенные домены для CORS | Нет | `https://verifybox.ru,https://www.verifybox.ru` |
 | `ALLOWED_IPS` | Разрешенные IP-адреса (опционально) | Нет | - |
+| `VONAGE_WHATSAPP_NUMBER` | Номер WhatsApp для отправки сообщений | Нет | - |
 
 ### 5. Перезапуск сервисов
 
@@ -151,6 +152,34 @@ curl -X POST https://your-domain.com/api/vonage/send-sms \
     "phone": "+1234567890",
     "message": "Your verification code: 123456",
     "sender": "VerifyBox"
+  }'
+```
+
+### Отправка кода через Voice (диктовка роботом)
+```bash
+curl -X POST https://your-domain.com/api/vonage/send-voice \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ваш_секретный_ключ" \
+  -H "X-Client-ID: verifybox-ru" \
+  -H "Origin: https://lk.verifybox.ru" \
+  -d '{
+    "phone": "+1234567890",
+    "code": "123456",
+    "language": "ru"
+  }'
+```
+
+### Отправка сообщения в WhatsApp
+```bash
+curl -X POST https://your-domain.com/api/vonage/send-whatsapp \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer ваш_секретный_ключ" \
+  -H "X-Client-ID: verifybox-ru" \
+  -H "Origin: https://lk.verifybox.ru" \
+  -d '{
+    "phone": "+1234567890",
+    "message": "Your verification code: 123456",
+    "template": "verification_code"
   }'
 ```
 

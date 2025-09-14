@@ -205,7 +205,18 @@ const sendSmsSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     message: Joi.string().min(1).max(1600).required(),
     sender: Joi.string().min(1).max(11).optional()
-    // Убираем vonageApiKey и vonageApiSecret из валидации
+});
+
+const sendVoiceSchema = Joi.object({
+    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
+    code: Joi.string().pattern(/^\d{3,12}$/).required(), // 3-12 цифр для гибкости
+    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('ru')
+});
+
+const sendWhatsAppSchema = Joi.object({
+    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
+    message: Joi.string().min(1).max(1000).required(),
+    template: Joi.string().optional()
 });
 
 // Маршруты API
@@ -289,6 +300,178 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         res.status(500).json({
             success: false,
             error: 'Failed to send SMS',
+            message: error.message
+        });
+    }
+});
+
+// Отправка кода через Voice API (диктовка роботом)
+app.post('/api/vonage/send-voice', checkIPAccess, authenticateClient, async (req, res) => {
+    try {
+        // Валидация входных данных
+        const { error, value } = sendVoiceSchema.validate(req.body);
+        if (error) {
+            logger.warn('Validation error in send-voice:', error.details);
+            return res.status(400).json({
+                success: false,
+                error: 'Validation error',
+                details: error.details.map(d => d.message)
+            });
+        }
+
+        const { phone, code, language } = value;
+
+        // Используем переменные окружения
+        const vonageApiKey = process.env.VONAGE_API_KEY;
+        const vonageApiSecret = process.env.VONAGE_API_SECRET;
+
+        if (!vonageApiKey || !vonageApiSecret) {
+            return res.status(500).json({
+                success: false,
+                error: 'Vonage API credentials not configured'
+            });
+        }
+
+        logger.info(`Sending voice call to ${phone} from client ${req.clientId}`, {
+            phone,
+            code,
+            language,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        // Создаем текст для диктовки
+        const textToSpeak = language === 'ru' 
+            ? `Ваш код подтверждения: ${code.split('').join(' ')}`
+            : `Your verification code is: ${code.split('').join(' ')}`;
+
+        // Отправляем Voice Call через Vonage API
+        const response = await axios.post('https://api.nexmo.com/v1/calls', {
+            to: [{
+                type: 'phone',
+                number: phone
+            }],
+            from: {
+                type: 'phone',
+                number: process.env.VONAGE_SENDER || 'VerifyBox'
+            },
+            ncco: [{
+                action: 'talk',
+                text: textToSpeak,
+                language: language,
+                style: 0
+            }]
+        }, {
+            auth: {
+                username: vonageApiKey,
+                password: vonageApiSecret
+            }
+        });
+
+        logger.info(`Voice call sent successfully`, {
+            callId: response.data.uuid,
+            phone,
+            clientId: req.clientId
+        });
+
+        res.json({
+            success: true,
+            message: 'Voice call sent successfully',
+            callId: response.data.uuid,
+            status: response.data.status
+        });
+
+    } catch (error) {
+        logger.error('Error sending voice call:', {
+            error: error.message,
+            stack: error.stack,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to send voice call',
+            message: error.message
+        });
+    }
+});
+
+// Отправка сообщения через WhatsApp
+app.post('/api/vonage/send-whatsapp', checkIPAccess, authenticateClient, async (req, res) => {
+    try {
+        // Валидация входных данных
+        const { error, value } = sendWhatsAppSchema.validate(req.body);
+        if (error) {
+            logger.warn('Validation error in send-whatsapp:', error.details);
+            return res.status(400).json({
+                success: false,
+                error: 'Validation error',
+                details: error.details.map(d => d.message)
+            });
+        }
+
+        const { phone, message, template } = value;
+
+        // Используем переменные окружения
+        const vonageApiKey = process.env.VONAGE_API_KEY;
+        const vonageApiSecret = process.env.VONAGE_API_SECRET;
+
+        if (!vonageApiKey || !vonageApiSecret) {
+            return res.status(500).json({
+                success: false,
+                error: 'Vonage API credentials not configured'
+            });
+        }
+
+        logger.info(`Sending WhatsApp message to ${phone} from client ${req.clientId}`, {
+            phone,
+            message,
+            template,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        // Отправляем WhatsApp сообщение через Vonage Messages API
+        const response = await axios.post('https://api.nexmo.com/v1/messages', {
+            to: phone,
+            from: process.env.VONAGE_WHATSAPP_NUMBER || process.env.VONAGE_SENDER,
+            channel: 'whatsapp',
+            message_type: 'text',
+            text: {
+                body: message
+            }
+        }, {
+            auth: {
+                username: vonageApiKey,
+                password: vonageApiSecret
+            }
+        });
+
+        logger.info(`WhatsApp message sent successfully`, {
+            messageId: response.data.message_uuid,
+            phone,
+            clientId: req.clientId
+        });
+
+        res.json({
+            success: true,
+            message: 'WhatsApp message sent successfully',
+            messageId: response.data.message_uuid,
+            status: response.data.status
+        });
+
+    } catch (error) {
+        logger.error('Error sending WhatsApp message:', {
+            error: error.message,
+            stack: error.stack,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to send WhatsApp message',
             message: error.message
         });
     }
