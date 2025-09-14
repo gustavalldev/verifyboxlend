@@ -102,6 +102,20 @@ const isIPAllowed = (ip) => {
 
 // Middleware для проверки IP
 const checkIPAccess = (req, res, next) => {
+    // Логируем все заголовки для отладки
+    logger.info('Request headers debug:', {
+        allHeaders: req.headers,
+        xRealIP: req.get('X-Real-IP'),
+        xForwardedFor: req.get('X-Forwarded-For'),
+        xForwardedProto: req.get('X-Forwarded-Proto'),
+        host: req.get('Host'),
+        origin: req.get('Origin'),
+        userAgent: req.get('User-Agent'),
+        remoteAddress: req.connection?.remoteAddress,
+        socketRemoteAddress: req.socket?.remoteAddress,
+        reqIP: req.ip
+    });
+    
     // Если IP не настроены, пропускаем проверку
     if (allowedIPs.length === 0) return next();
     
