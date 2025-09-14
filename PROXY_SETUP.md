@@ -53,7 +53,7 @@ node test-proxy.cjs
 landing_en/
 ├── src/                    # React лендинг
 ├── proxy/                  # Прокси-сервер Vonage
-│   ├── server.js          # Основной сервер
+│   ├── server.cjs         # Основной сервер
 │   ├── .env               # Конфигурация (создается из env.example)
 │   ├── env.example        # Пример конфигурации
 │   └── logs/              # Логи прокси-сервера
