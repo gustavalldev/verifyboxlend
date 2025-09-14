@@ -179,6 +179,11 @@ const authenticateClient = (req, res, next) => {
     const token = authHeader.substring(7);
     const expectedSecret = validApiKeys[clientId];
     
+    // В authenticateClient middleware добавить:
+    logger.info('API Keys loaded:', validApiKeys);
+    logger.info('Received token:', token);
+    logger.info('Expected secret:', expectedSecret);
+    
     if (!expectedSecret || token !== expectedSecret) {
         logger.warn(`Unauthorized access attempt from client: ${clientId}`, {
             ip: req.clientIP || req.ip,
