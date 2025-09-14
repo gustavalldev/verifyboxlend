@@ -14,6 +14,11 @@ npm install
 npm run dev
 ```
 
+### Run Proxy Server (for Vonage API)
+```bash
+npm run proxy:dev
+```
+
 ### Build for Production
 ```bash
 npm run build
@@ -48,6 +53,11 @@ landing_en/
 │   ├── main.jsx             # Entry Point
 │   ├── index.css            # Global Styles
 │   └── Tariffs.css          # Pricing Styles
+├── proxy/                   # Vonage API Proxy Server
+│   ├── server.js            # Main proxy server
+│   ├── .env                 # Proxy configuration
+│   ├── env.example          # Configuration template
+│   └── logs/                # Proxy logs
 ├── public/                  # Static Assets
 │   ├── favicon.svg
 │   ├── logo.svg
@@ -59,7 +69,10 @@ landing_en/
 ├── tailwind.config.js       # Tailwind Configuration
 ├── postcss.config.js        # PostCSS Configuration
 ├── vite.config.js           # Vite Configuration
-└── nginx.conf               # Nginx Configuration
+├── nginx.conf               # Nginx Configuration
+├── test-proxy.cjs           # Proxy testing script
+├── PROXY_SETUP.md           # Proxy setup guide
+└── VONAGE_PROXY_README.md   # Detailed proxy documentation
 ```
 
 ## 🎨 Technologies
@@ -68,6 +81,9 @@ landing_en/
 - **Vite** - Build Tool & Dev Server
 - **Tailwind CSS** - Styling Framework
 - **PostCSS** - CSS Processing
+- **Express.js** - Proxy Server Framework
+- **Vonage API** - SMS Service Integration
+- **PM2** - Process Manager for Production
 
 ## 🌟 Features
 
@@ -81,6 +97,9 @@ landing_en/
 - **Cookie Consent** - GDPR compliant cookie banner
 - **Pricing Plans** - Multiple subscription tiers
 - **Contact Information** - Multiple contact methods
+- **Vonage API Proxy** - Secure SMS service integration
+- **CORS Protection** - Secure API access control
+- **Comprehensive Logging** - Full request/response logging
 
 ## 🌐 Deployment
 
@@ -126,6 +145,30 @@ EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
 ```
 
+## 🔧 Proxy Server Setup
+
+This project includes a Vonage API proxy server that allows your Russian server to send SMS to international numbers. The proxy runs on port 3001 and provides secure API endpoints.
+
+### Quick Proxy Setup
+
+1. **Configure the proxy:**
+   ```bash
+   cp proxy/env.example proxy/.env
+   nano proxy/.env
+   ```
+
+2. **Start the proxy server:**
+   ```bash
+   npm run proxy:dev
+   ```
+
+3. **Test the proxy:**
+   ```bash
+   node test-proxy.cjs
+   ```
+
+For detailed setup instructions, see [PROXY_SETUP.md](PROXY_SETUP.md) and [VONAGE_PROXY_README.md](VONAGE_PROXY_README.md).
+
 ## 🔗 Links
 
 - **Landing Page**: https://verifybox.tech
@@ -151,10 +194,21 @@ CMD ["nginx", "-g", "daemon off;"]
 - `npm run build` - Build for production
 - `npm run preview` - Preview production build
 - `npm run lint` - Run ESLint
+- `npm run proxy:dev` - Start proxy server in development mode
+- `npm run proxy:start` - Start proxy server with PM2
+- `npm run proxy:stop` - Stop proxy server
+- `npm run proxy:restart` - Restart proxy server
+- `npm run proxy:logs` - View proxy server logs
 
 ### Environment Variables
 
-No environment variables required for basic functionality.
+**For the landing page:** No environment variables required for basic functionality.
+
+**For the proxy server:** Configure `proxy/.env` file with:
+- `VONAGE_API_KEY` - Your Vonage API key
+- `VONAGE_API_SECRET` - Your Vonage API secret
+- `PROXY_API_KEYS` - API keys for client authentication
+- `ALLOWED_ORIGINS` - Allowed CORS origins
 
 ## 📄 License
 
