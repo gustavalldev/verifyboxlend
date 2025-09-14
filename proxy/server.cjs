@@ -116,9 +116,6 @@ const checkIPAccess = (req, res, next) => {
         reqIP: req.ip
     });
     
-    // Если IP не настроены, пропускаем проверку
-    if (allowedIPs.length === 0) return next();
-    
     // Получаем реальный IP из заголовков Nginx
     // Берем первый IP из X-Forwarded-For (реальный IP клиента)
     const clientIP = req.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
@@ -126,6 +123,12 @@ const checkIPAccess = (req, res, next) => {
                     req.ip || 
                     req.connection.remoteAddress || 
                     req.socket.remoteAddress;
+    
+    // ВСЕГДА сохраняем правильный IP в req для использования в других middleware
+    req.clientIP = clientIP;
+    
+    // Если IP не настроены, пропускаем проверку
+    if (allowedIPs.length === 0) return next();
     
     if (!isIPAllowed(clientIP)) {
         logger.warn(`Access denied from IP: ${clientIP}`, {
@@ -140,9 +143,6 @@ const checkIPAccess = (req, res, next) => {
             error: 'Access denied from this IP address'
         });
     }
-    
-    // Сохраняем правильный IP в req для использования в других middleware
-    req.clientIP = clientIP;
     
     next();
 };
