@@ -141,6 +141,9 @@ const checkIPAccess = (req, res, next) => {
         });
     }
     
+    // Сохраняем правильный IP в req для использования в других middleware
+    req.clientIP = clientIP;
+    
     next();
 };
 
@@ -178,7 +181,7 @@ const authenticateClient = (req, res, next) => {
     
     if (!expectedSecret || token !== expectedSecret) {
         logger.warn(`Unauthorized access attempt from client: ${clientId}`, {
-            ip: req.ip,
+            ip: req.clientIP || req.ip,
             userAgent: req.get('User-Agent'),
             url: req.url
         });
@@ -245,7 +248,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             phone,
             sender,
             clientId: req.clientId,
-            ip: req.ip
+            ip: req.clientIP || req.ip
         });
 
         // Отправляем SMS через Vonage API (HTTP)
@@ -275,7 +278,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             error: error.message,
             stack: error.stack,
             clientId: req.clientId,
-            ip: req.ip
+            ip: req.clientIP || req.ip
         });
 
         res.status(500).json({
