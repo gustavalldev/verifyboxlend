@@ -2,10 +2,10 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const { Vonage } = require('@vonage/server-sdk');
 const Joi = require('joi');
 const winston = require('winston');
 const path = require('path');
+const axios = require('axios');
 require('dotenv').config();
 
 // Настройка логгера
@@ -30,12 +30,6 @@ const logger = winston.createLogger({
 });
 
 const app = express();
-
-// Инициализация Vonage
-const vonage = new Vonage({
-    apiKey: process.env.VONAGE_API_KEY,
-    apiSecret: process.env.VONAGE_API_SECRET
-});
 
 // Middleware
 app.use(helmet());
@@ -181,7 +175,7 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Отправка SMS через Vonage
+// Отправка SMS через Vonage API (HTTP)
 app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, res) => {
     try {
         // Валидация входных данных
@@ -204,14 +198,10 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             ip: req.ip
         });
 
-        // Создаем экземпляр Vonage с переданными ключами
-        const clientVonage = new Vonage({
-            apiKey: vonageApiKey,
-            apiSecret: vonageApiSecret
-        });
-
-        // Отправляем SMS через Vonage
-        const result = await clientVonage.sms.send({
+        // Отправляем SMS через Vonage API (HTTP)
+        const response = await axios.post('https://rest.nexmo.com/sms/json', {
+            api_key: vonageApiKey,
+            api_secret: vonageApiSecret,
             to: phone,
             from: sender || process.env.VONAGE_SENDER || 'VerifyBox',
             text: message,
@@ -219,7 +209,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         });
 
         logger.info(`SMS sent successfully`, {
-            messageId: result.messages[0]['message-id'],
+            messageId: response.data.messages[0]['message-id'],
             phone,
             clientId: req.clientId
         });
@@ -227,8 +217,8 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         res.json({
             success: true,
             message: 'SMS sent successfully',
-            messageId: result.messages[0]['message-id'],
-            remainingBalance: result.messages[0]['remaining-balance']
+            messageId: response.data.messages[0]['message-id'],
+            remainingBalance: response.data.messages[0]['remaining-balance']
         });
 
     } catch (error) {
@@ -259,11 +249,6 @@ app.get('/api/vonage/sms-status/:messageId', checkIPAccess, authenticateClient, 
                 error: 'Missing vonageApiKey or vonageApiSecret in query parameters'
             });
         }
-
-        const clientVonage = new Vonage({
-            apiKey: vonageApiKey,
-            apiSecret: vonageApiSecret
-        });
 
         // Vonage не предоставляет прямой API для проверки статуса SMS
         // Возвращаем общий статус
@@ -300,18 +285,13 @@ app.get('/api/vonage/balance', checkIPAccess, authenticateClient, async (req, re
             });
         }
 
-        const clientVonage = new Vonage({
-            apiKey: vonageApiKey,
-            apiSecret: vonageApiSecret
-        });
-
-        // Получаем баланс через Vonage API
-        const balance = await clientVonage.accounts.getBalance();
-
+        // Получаем баланс через Vonage API (HTTP)
+        const response = await axios.get(`https://rest.nexmo.com/account/get-balance?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}`);
+        
         res.json({
             success: true,
-            balance: balance.value,
-            currency: balance.autoReload ? 'EUR' : 'USD',
+            balance: response.data.value,
+            currency: response.data.autoReload ? 'EUR' : 'USD',
             message: 'Balance retrieved successfully'
         });
 
@@ -342,17 +322,12 @@ app.get('/api/vonage/pricing/:phone', checkIPAccess, authenticateClient, async (
             });
         }
 
-        const clientVonage = new Vonage({
-            apiKey: vonageApiKey,
-            apiSecret: vonageApiSecret
-        });
-
-        // Получаем цены через Vonage Pricing API
-        const pricing = await clientVonage.pricing.getCountryPricing(phone);
+        // Получаем цены через Vonage Pricing API (HTTP)
+        const response = await axios.get(`https://rest.nexmo.com/pricing/sms?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}&country=${phone.substring(1, 3)}`);
 
         res.json({
             success: true,
-            price: pricing.countries[0]?.networks[0]?.prices?.sms?.price || 0.05,
+            price: response.data.countries[0]?.networks[0]?.prices?.sms?.price || 0.05,
             currency: 'EUR',
             message: 'Pricing retrieved successfully'
         });
