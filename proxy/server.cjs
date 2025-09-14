@@ -105,11 +105,18 @@ const checkIPAccess = (req, res, next) => {
     // Если IP не настроены, пропускаем проверку
     if (allowedIPs.length === 0) return next();
     
-    const clientIP = req.ip || req.connection.remoteAddress || req.socket.remoteAddress;
+    // Получаем реальный IP из заголовков Nginx
+    const clientIP = req.get('X-Real-IP') || 
+                    req.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
+                    req.ip || 
+                    req.connection.remoteAddress || 
+                    req.socket.remoteAddress;
     
     if (!isIPAllowed(clientIP)) {
         logger.warn(`Access denied from IP: ${clientIP}`, {
             ip: clientIP,
+            realIP: req.get('X-Real-IP'),
+            forwardedFor: req.get('X-Forwarded-For'),
             userAgent: req.get('User-Agent'),
             url: req.url
         });
