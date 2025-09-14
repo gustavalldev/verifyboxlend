@@ -120,8 +120,9 @@ const checkIPAccess = (req, res, next) => {
     if (allowedIPs.length === 0) return next();
     
     // Получаем реальный IP из заголовков Nginx
-    const clientIP = req.get('X-Real-IP') || 
-                    req.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
+    // Берем первый IP из X-Forwarded-For (реальный IP клиента)
+    const clientIP = req.get('X-Forwarded-For')?.split(',')[0]?.trim() || 
+                    req.get('X-Real-IP') || 
                     req.ip || 
                     req.connection.remoteAddress || 
                     req.socket.remoteAddress;
