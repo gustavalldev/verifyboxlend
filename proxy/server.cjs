@@ -278,7 +278,14 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         const vonageApiKey = process.env.VONAGE_API_KEY;
         const vonageApiSecret = process.env.VONAGE_API_SECRET;
 
+        logger.info('Vonage API Key:', { vonageApiKey });
+        logger.info('Vonage API Secret:', { vonageApiSecret });
+
         if (!vonageApiKey || !vonageApiSecret) {
+            logger.error('Vonage API credentials missing!', {
+                hasKey: !!vonageApiKey,
+                hasSecret: !!vonageApiSecret
+            });
             return res.status(500).json({
                 success: false,
                 error: 'Vonage API credentials not configured'
@@ -350,7 +357,14 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
         const vonageApiKey = process.env.VONAGE_API_KEY;
         const vonageApiSecret = process.env.VONAGE_API_SECRET;
 
+        logger.info('Vonage API Key:', { vonageApiKey });
+        logger.info('Vonage API Secret:', { vonageApiSecret });
+
         if (!vonageApiKey || !vonageApiSecret) {
+            logger.error('Vonage API credentials missing!', {
+                hasKey: !!vonageApiKey,
+                hasSecret: !!vonageApiSecret
+            });
             return res.status(500).json({
                 success: false,
                 error: 'Vonage API credentials not configured'
@@ -451,7 +465,14 @@ app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (r
         const vonageApiKey = process.env.VONAGE_API_KEY;
         const vonageApiSecret = process.env.VONAGE_API_SECRET;
 
+        logger.info('Vonage API Key:', { vonageApiKey });
+        logger.info('Vonage API Secret:', { vonageApiSecret });
+
         if (!vonageApiKey || !vonageApiSecret) {
+            logger.error('Vonage API credentials missing!', {
+                hasKey: !!vonageApiKey,
+                hasSecret: !!vonageApiSecret
+            });
             return res.status(500).json({
                 success: false,
                 error: 'Vonage API credentials not configured'
@@ -552,7 +573,14 @@ app.post('/api/vonage/check-verify', checkIPAccess, authenticateClient, async (r
         const vonageApiKey = process.env.VONAGE_API_KEY;
         const vonageApiSecret = process.env.VONAGE_API_SECRET;
 
+        logger.info('Vonage API Key:', { vonageApiKey });
+        logger.info('Vonage API Secret:', { vonageApiSecret });
+
         if (!vonageApiKey || !vonageApiSecret) {
+            logger.error('Vonage API credentials missing!', {
+                hasKey: !!vonageApiKey,
+                hasSecret: !!vonageApiSecret
+            });
             return res.status(500).json({
                 success: false,
                 error: 'Vonage API credentials not configured'
