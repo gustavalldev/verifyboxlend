@@ -245,7 +245,60 @@ app.get('/api/health', checkIPAccess, authenticateClient, (req, res) => {
     });
 });
 
-// Webhook endpoint для получения статуса и стоимости SMS от Vonage
+// Webhook endpoint для получения статуса и стоимости SMS от Vonage (GET с параметрами)
+app.get('/webhook/vonage-sms-status', (req, res) => {
+    try {
+        const { msisdn, to, network_code, messageId } = req.query;
+        
+        logger.info('Received Vonage SMS webhook (GET):', {
+            msisdn,
+            to,
+            network_code,
+            messageId,
+            query: req.query
+        });
+
+        // Отправляем данные о стоимости на внутренний API
+        if (messageId) {
+            const costData = {
+                messageId: messageId,
+                phone: `+${msisdn}`,
+                cost: {
+                    amount: '0.045', // Примерная стоимость, так как в GET нет usage
+                    currency: 'EUR'
+                },
+                status: 'delivered',
+                timestamp: new Date().toISOString(),
+                numMessages: '1',
+                networkCode: network_code
+            };
+
+            // Отправляем на внутренний API
+            axios.post('https://lk.verifybox.ru/api/webhook/vonage-cost', costData)
+                .then(response => {
+                    logger.info('Cost data sent to internal API successfully:', {
+                        messageId: messageId,
+                        status: response.status
+                    });
+                })
+                .catch(error => {
+                    logger.error('Failed to send cost data to internal API:', {
+                        messageId: messageId,
+                        error: error.message
+                    });
+                });
+
+            logger.info(`SMS webhook received: ${messageId} for phone +${msisdn}`);
+        }
+
+        res.status(200).json({ status: 'received' });
+    } catch (error) {
+        logger.error('Error processing Vonage webhook (GET):', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+// Webhook endpoint для получения статуса и стоимости SMS от Vonage (POST с JSON)
 app.post('/webhook/vonage-sms-status', express.json(), (req, res) => {
     try {
         const webhookData = req.body;
