@@ -3,7 +3,7 @@ export default {
     {
       name: 'verifybox-proxy',
       script: 'proxy/server.cjs',
-      cwd: '/home/kirill/Рабочий стол/projects/landing_en',
+      cwd: '/var/www/verifyboxlending',
       env_file: '.env',
       instances: 1,
       exec_mode: 'fork',
@@ -25,7 +25,7 @@ export default {
     {
       name: 'verifybox-webhook',
       script: 'webhook-server.cjs',
-      cwd: '/home/kirill/Рабочий стол/projects/landing_en',
+      cwd: '/var/www/verifyboxlending',
       env_file: '.env',
       instances: 1,
       exec_mode: 'fork',
