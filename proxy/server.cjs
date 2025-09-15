@@ -381,6 +381,11 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
         });
 
         // Отправляем запрос на верификацию через Vonage Verify API
+        logger.info('Sending to Vonage API with keys:', {
+            api_key: vonageApiKey,
+            api_secret: vonageApiSecret
+        });
+        
         const response = await axios.post('https://api.nexmo.com/verify/json', {
             api_key: vonageApiKey,
             api_secret: vonageApiSecret,
