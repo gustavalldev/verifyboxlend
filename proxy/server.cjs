@@ -35,6 +35,9 @@ const logger = winston.createLogger({
 
 const app = express();
 
+// Кэш для дедупликации webhook'ов
+const processedWebhooks = new Set();
+
 // Middleware
 app.use(helmet());
 
@@ -262,8 +265,16 @@ app.get('/webhook/vonage-sms-status', (req, res) => {
             query: req.query
         });
 
+        // Проверяем дедупликацию webhook'ов
+        if (processedWebhooks.has(messageId)) {
+            logger.info(`Webhook already processed for messageId: ${messageId}, skipping`);
+            return res.status(200).json({ status: 'already_processed' });
+        }
+
         // Отправляем данные о стоимости на внутренний API
         if (messageId) {
+            // Добавляем в кэш обработанных webhook'ов
+            processedWebhooks.add(messageId);
             const costData = {
                 messageId: messageId,
                 phone: `+${msisdn}`,
