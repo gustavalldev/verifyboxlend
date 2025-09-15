@@ -187,6 +187,8 @@ const authenticateClient = (req, res, next) => {
     logger.info('API Keys loaded:', validApiKeys);
     logger.info('Received token:', token);
     logger.info('Expected secret:', expectedSecret);
+    logger.info('Client ID:', clientId);
+    logger.info('Auth header:', authHeader);
     
     if (!expectedSecret || token !== expectedSecret) {
         logger.warn(`Unauthorized access attempt from client: ${clientId}`, {
