@@ -391,7 +391,6 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
                 api_key: vonageApiKey,
                 api_secret: vonageApiSecret,
                 number: phone,
-                brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
                 code_length: codeLength,
                 'workflow[0][channel]': 'sms'
             }
@@ -498,7 +497,6 @@ app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (r
                 api_key: vonageApiKey,
                 api_secret: vonageApiSecret,
                 number: phone,
-                brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
                 code_length: codeLength,
                 'workflow[0][channel]': 'voice'
             }
