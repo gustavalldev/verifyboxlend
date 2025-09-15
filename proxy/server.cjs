@@ -45,18 +45,19 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
     'https://lk.verifybox.ru'
 ];
 
-app.use(cors({
+// CORS middleware - исключаем webhook endpoints
+app.use((req, res, next) => {
+    if (req.path.includes('/webhook/')) {
+        // Разрешаем webhook без CORS проверки
+        return next();
+    }
+    // Применяем CORS для остальных endpoints
+    cors({
     origin: function (origin, callback) {
         // Разрешаем webhook от Vonage без origin header
         if (!origin) {
-            // Проверяем если это webhook endpoint
-            if (req?.path?.includes('/webhook/')) {
-                return callback(null, true);
-            }
             logger.warn(`CORS blocked request without origin`, {
-                ip: req?.ip,
-                userAgent: req?.get('User-Agent'),
-                path: req?.path
+                userAgent: req?.get('User-Agent')
             });
             return callback(new Error('Origin header required'));
         }
@@ -75,7 +76,8 @@ app.use(cors({
     methods: ['GET', 'POST'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Client-ID'],
     maxAge: 86400 // 24 часа
-}));
+})(req, res, next);
+});
 
 app.use(compression());
 app.use(express.json({ limit: '10mb' }));
