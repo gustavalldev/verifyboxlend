@@ -47,11 +47,16 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Блокируем запросы без origin (только разрешенные домены)
+        // Разрешаем webhook от Vonage без origin header
         if (!origin) {
+            // Проверяем если это webhook endpoint
+            if (req?.path?.includes('/webhook/')) {
+                return callback(null, true);
+            }
             logger.warn(`CORS blocked request without origin`, {
                 ip: req?.ip,
-                userAgent: req?.get('User-Agent')
+                userAgent: req?.get('User-Agent'),
+                path: req?.path
             });
             return callback(new Error('Origin header required'));
         }
