@@ -216,7 +216,7 @@ const sendSmsSchema = Joi.object({
 const sendVoiceSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     code: Joi.string().pattern(/^\d{4,8}$/).required(),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('ru')
+    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
 });
 
 const sendWhatsAppSchema = Joi.object({
@@ -229,14 +229,21 @@ const verifySmsSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('ru')
+    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
 });
 
 const verifyVoiceSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('ru')
+    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
+});
+
+const verifyWhatsAppSchema = Joi.object({
+    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
+    brand: Joi.string().min(1).max(20).optional(),
+    codeLength: Joi.number().min(4).max(10).default(6),
+    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
 });
 
 const checkVerifySchema = Joi.object({
@@ -556,7 +563,119 @@ app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (r
     }
 });
 
-// Проверка кода верификации (общий для SMS и Voice)
+// Отправка OTP через WhatsApp (Vonage Verify API)
+app.post('/api/vonage/verify-whatsapp', checkIPAccess, authenticateClient, async (req, res) => {
+    try {
+        // Валидация входных данных
+        const { error, value } = verifyWhatsAppSchema.validate(req.body);
+        if (error) {
+            logger.warn('Validation error in verify-whatsapp:', error.details);
+            return res.status(400).json({
+                success: false,
+                error: 'Validation error',
+                details: error.details.map(d => d.message)
+            });
+        }
+
+        const { phone, brand, codeLength, language } = value;
+
+        // Используем переменные окружения
+        const vonageApiKey = process.env.VONAGE_API_KEY;
+        const vonageApiSecret = process.env.VONAGE_API_SECRET;
+
+        logger.info('Vonage API Key:', { vonageApiKey });
+        logger.info('Vonage API Secret:', { vonageApiSecret });
+
+        if (!vonageApiKey || !vonageApiSecret) {
+            logger.error('Vonage API credentials missing!', {
+                hasKey: !!vonageApiKey,
+                hasSecret: !!vonageApiSecret
+            });
+            return res.status(500).json({
+                success: false,
+                error: 'Vonage API credentials not configured'
+            });
+        }
+
+        logger.info(`Starting WhatsApp verification for ${phone} from client ${req.clientId}`, {
+            phone,
+            brand,
+            codeLength,
+            language,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        // Отправляем запрос на верификацию через Vonage Verify API
+        logger.info('Sending to Vonage API with keys:', {
+            api_key: vonageApiKey,
+            api_secret: vonageApiSecret
+        });
+        
+        const response = await axios.get('https://api.nexmo.com/verify/json', {
+            params: {
+                api_key: vonageApiKey,
+                api_secret: vonageApiSecret,
+                number: phone,
+                brand: 'Verify',
+                code_length: codeLength,
+                'workflow[0][channel]': 'whatsapp'
+            }
+        });
+
+        logger.info('Vonage Verify WhatsApp API response:', {
+            status: response.status,
+            data: response.data,
+            phone,
+            clientId: req.clientId
+        });
+
+        if (response.data.status === '0') {
+            logger.info(`WhatsApp verification started successfully`, {
+                requestId: response.data.request_id,
+                phone,
+                clientId: req.clientId
+            });
+
+            res.json({
+                success: true,
+                message: 'WhatsApp verification code sent successfully',
+                requestId: response.data.request_id,
+                status: response.data.status
+            });
+        } else {
+            logger.warn(`WhatsApp verification failed`, {
+                status: response.data.status,
+                error: response.data.error_text,
+                phone,
+                clientId: req.clientId
+            });
+
+            res.status(400).json({
+                success: false,
+                error: 'Failed to start WhatsApp verification',
+                status: response.data.status,
+                message: response.data.error_text
+            });
+        }
+
+    } catch (error) {
+        logger.error('Error starting WhatsApp verification:', {
+            error: error.message,
+            stack: error.stack,
+            clientId: req.clientId,
+            ip: req.clientIP || req.ip
+        });
+
+        res.status(500).json({
+            success: false,
+            error: 'Failed to start WhatsApp verification',
+            message: error.message
+        });
+    }
+});
+
+// Проверка кода верификации (общий для SMS, Voice и WhatsApp)
 app.post('/api/vonage/check-verify', checkIPAccess, authenticateClient, async (req, res) => {
     try {
         // Валидация входных данных
