@@ -240,6 +240,63 @@ app.get('/api/health', checkIPAccess, authenticateClient, (req, res) => {
     });
 });
 
+// Webhook endpoint для получения статуса и стоимости SMS от Vonage
+app.post('/webhook/vonage-sms-status', express.json(), (req, res) => {
+    try {
+        const webhookData = req.body;
+        
+        logger.info('Received Vonage SMS webhook:', {
+            channel: webhookData.channel,
+            message_uuid: webhookData.message_uuid,
+            to: webhookData.to,
+            from: webhookData.from,
+            timestamp: webhookData.timestamp,
+            num_messages: webhookData.sms?.num_messages,
+            price: webhookData.usage?.price,
+            currency: webhookData.usage?.currency,
+            network_code: webhookData.origin?.network_code
+        });
+
+        // Отправляем данные о стоимости на внутренний API
+        if (webhookData.usage?.price && webhookData.message_uuid) {
+            const costData = {
+                messageId: webhookData.message_uuid,
+                phone: `+${webhookData.to}`,
+                cost: {
+                    amount: webhookData.usage.price,
+                    currency: webhookData.usage.currency
+                },
+                status: 'delivered', // Vonage webhook приходит только после доставки
+                timestamp: webhookData.timestamp,
+                numMessages: webhookData.sms?.num_messages || '1',
+                networkCode: webhookData.origin?.network_code
+            };
+
+            // Отправляем на внутренний API
+            axios.post('https://lk.verifybox.ru/api/webhook/vonage-cost', costData)
+                .then(response => {
+                    logger.info('Cost data sent to internal API successfully:', {
+                        messageId: webhookData.message_uuid,
+                        status: response.status
+                    });
+                })
+                .catch(error => {
+                    logger.error('Failed to send cost data to internal API:', {
+                        messageId: webhookData.message_uuid,
+                        error: error.message
+                    });
+                });
+
+            logger.info(`SMS cost received: ${webhookData.usage.price} ${webhookData.usage.currency} for message ${webhookData.message_uuid}`);
+        }
+
+        res.status(200).json({ status: 'received' });
+    } catch (error) {
+        logger.error('Error processing Vonage webhook:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
 // Отправка SMS через Vonage API (HTTP)
 app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, res) => {
     try {
@@ -281,19 +338,6 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             ip: req.clientIP || req.ip
         });
 
-        // Сначала получаем реальную стоимость SMS
-        let smsCost = '0.15'; // значение по умолчанию
-        try {
-            const countryCode = phone.substring(1, 3);
-            const pricingResponse = await axios.get(`https://rest.nexmo.com/pricing/sms?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}&country=${countryCode}`);
-            
-            if (pricingResponse.data.countries && pricingResponse.data.countries[0]?.networks?.[0]?.prices?.sms?.price) {
-                smsCost = pricingResponse.data.countries[0].networks[0].prices.sms.price;
-                logger.info(`SMS cost retrieved: ${smsCost} EUR for country ${countryCode}`);
-            }
-        } catch (pricingError) {
-            logger.warn('Failed to get SMS pricing, using default cost:', pricingError.message);
-        }
 
         // Отправляем SMS через Vonage API (HTTP)
         const response = await axios.post('https://rest.nexmo.com/sms/json', {
@@ -301,7 +345,8 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             api_secret: vonageApiSecret,
             to: phone,
             from: sender || process.env.VONAGE_SENDER || 'VerifyBox',
-            text: message
+            text: message,
+            callback: 'https://verifybox.tech/webhook/vonage-sms-status'  // Webhook для получения стоимости
         });
 
         logger.info(`SMS sent successfully`, {
@@ -313,13 +358,7 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
         res.json({
             success: true,
             message: 'SMS sent successfully',
-            messageId: response.data.messages[0]['message-id'],
-            remainingBalance: response.data.messages[0]['remaining-balance'],
-            cost: {
-                amount: smsCost,
-                currency: 'EUR',
-                description: 'SMS cost'
-            }
+            messageId: response.data.messages[0]['message-id']
         });
 
     } catch (error) {
@@ -414,45 +453,6 @@ app.get('/api/vonage/balance', checkIPAccess, authenticateClient, async (req, re
     }
 });
 
-// Получение цен на отправку SMS
-app.get('/api/vonage/pricing/:phone', checkIPAccess, authenticateClient, async (req, res) => {
-    try {
-        const { phone } = req.params;
-        const { vonageApiKey, vonageApiSecret } = req.query;
-
-        if (!vonageApiKey || !vonageApiSecret) {
-            return res.status(400).json({
-                success: false,
-                error: 'Missing vonageApiKey or vonageApiSecret in query parameters'
-            });
-        }
-
-        // Получаем цены через Vonage Pricing API (HTTP)
-        const response = await axios.get(`https://rest.nexmo.com/pricing/sms?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}&country=${phone.substring(1, 3)}`);
-
-        res.json({
-            success: true,
-            price: response.data.countries[0]?.networks[0]?.prices?.sms?.price || 0.05,
-            currency: 'EUR',
-            message: 'Pricing retrieved successfully'
-        });
-
-    } catch (error) {
-        logger.error('Error getting Vonage pricing:', {
-            error: error.message,
-            phone: req.params.phone,
-            clientId: req.clientId
-        });
-
-        // Возвращаем примерную цену в случае ошибки
-        res.json({
-            success: true,
-            price: 0.05, // 5 центов
-            currency: 'EUR',
-            message: 'Using default pricing due to API error'
-        });
-    }
-});
 
 // Обработка ошибок
 app.use((err, req, res, next) => {
