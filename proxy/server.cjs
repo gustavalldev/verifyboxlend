@@ -225,31 +225,6 @@ const sendWhatsAppSchema = Joi.object({
     template: Joi.string().optional()
 });
 
-const verifySmsSchema = Joi.object({
-    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
-    brand: Joi.string().min(1).max(20).optional(),
-    codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
-});
-
-const verifyVoiceSchema = Joi.object({
-    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
-    brand: Joi.string().min(1).max(20).optional(),
-    codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
-});
-
-const verifyWhatsAppSchema = Joi.object({
-    phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
-    brand: Joi.string().min(1).max(20).optional(),
-    codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
-});
-
-const checkVerifySchema = Joi.object({
-    requestId: Joi.string().required(),
-    code: Joi.string().pattern(/^\d{4,10}$/).required()
-});
 
 // Маршруты API
 
@@ -306,6 +281,20 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             ip: req.clientIP || req.ip
         });
 
+        // Сначала получаем реальную стоимость SMS
+        let smsCost = '0.15'; // значение по умолчанию
+        try {
+            const countryCode = phone.substring(1, 3);
+            const pricingResponse = await axios.get(`https://rest.nexmo.com/pricing/sms?api_key=${vonageApiKey}&api_secret=${vonageApiSecret}&country=${countryCode}`);
+            
+            if (pricingResponse.data.countries && pricingResponse.data.countries[0]?.networks?.[0]?.prices?.sms?.price) {
+                smsCost = pricingResponse.data.countries[0].networks[0].prices.sms.price;
+                logger.info(`SMS cost retrieved: ${smsCost} EUR for country ${countryCode}`);
+            }
+        } catch (pricingError) {
+            logger.warn('Failed to get SMS pricing, using default cost:', pricingError.message);
+        }
+
         // Отправляем SMS через Vonage API (HTTP)
         const response = await axios.post('https://rest.nexmo.com/sms/json', {
             api_key: vonageApiKey,
@@ -325,7 +314,12 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
             success: true,
             message: 'SMS sent successfully',
             messageId: response.data.messages[0]['message-id'],
-            remainingBalance: response.data.messages[0]['remaining-balance']
+            remainingBalance: response.data.messages[0]['remaining-balance'],
+            cost: {
+                amount: smsCost,
+                currency: 'EUR',
+                description: 'SMS cost'
+            }
         });
 
     } catch (error) {
@@ -344,436 +338,9 @@ app.post('/api/vonage/send-sms', checkIPAccess, authenticateClient, async (req, 
     }
 });
 
-// Отправка OTP через SMS (Vonage Verify API)
-app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req, res) => {
-    try {
-        // Валидация входных данных
-        const { error, value } = verifySmsSchema.validate(req.body);
-        if (error) {
-            logger.warn('Validation error in verify-sms:', error.details);
-            return res.status(400).json({
-                success: false,
-                error: 'Validation error',
-                details: error.details.map(d => d.message)
-            });
-        }
 
-        const { phone, brand, codeLength, language } = value;
-        
 
-        // Используем переменные окружения
-        const vonageApiKey = process.env.VONAGE_API_KEY;
-        const vonageApiSecret = process.env.VONAGE_API_SECRET;
 
-        logger.info('Vonage API Key:', { vonageApiKey });
-        logger.info('Vonage API Secret:', { vonageApiSecret });
-
-        if (!vonageApiKey || !vonageApiSecret) {
-            logger.error('Vonage API credentials missing!', {
-                hasKey: !!vonageApiKey,
-                hasSecret: !!vonageApiSecret
-            });
-            return res.status(500).json({
-                success: false,
-                error: 'Vonage API credentials not configured'
-            });
-        }
-
-        logger.info(`Starting SMS verification for ${phone} from client ${req.clientId}`, {
-            phone,
-            brand,
-            codeLength,
-            language,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        // Отправляем запрос на верификацию через Vonage Verify API
-        logger.info('Sending to Vonage API with keys:', {
-            api_key: vonageApiKey,
-            api_secret: vonageApiSecret
-        });
-        
-        const response = await axios.get('https://api.nexmo.com/verify/json', {
-            params: {
-                api_key: vonageApiKey,
-                api_secret: vonageApiSecret,
-                number: phone,
-                brand: 'Verify',
-                code_length: codeLength,
-                'workflow[0][channel]': 'sms'
-            }
-        });
-
-        logger.info('Vonage Verify SMS API response:', {
-            status: response.status,
-            data: response.data,
-            phone,
-            clientId: req.clientId
-        });
-
-        if (response.data.status === '0') {
-            logger.info(`SMS verification started successfully`, {
-                requestId: response.data.request_id,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.json({
-                success: true,
-                message: 'SMS verification code sent successfully',
-                requestId: response.data.request_id,
-                status: response.data.status
-            });
-        } else {
-            logger.warn(`SMS verification failed`, {
-                status: response.data.status,
-                error: response.data.error_text,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.status(400).json({
-                success: false,
-                error: 'Failed to start SMS verification',
-                status: response.data.status,
-                message: response.data.error_text
-            });
-        }
-
-    } catch (error) {
-        logger.error('Error starting SMS verification:', {
-            error: error.message,
-            stack: error.stack,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to start SMS verification',
-            message: error.message
-        });
-    }
-});
-
-// Отправка OTP через Voice (Vonage Verify API)
-app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (req, res) => {
-    try {
-        // Валидация входных данных
-        const { error, value } = verifyVoiceSchema.validate(req.body);
-        if (error) {
-            logger.warn('Validation error in verify-voice:', error.details);
-            return res.status(400).json({
-                success: false,
-                error: 'Validation error',
-                details: error.details.map(d => d.message)
-            });
-        }
-
-        const { phone, brand, codeLength, language } = value;
-        
-
-        // Используем переменные окружения
-        const vonageApiKey = process.env.VONAGE_API_KEY;
-        const vonageApiSecret = process.env.VONAGE_API_SECRET;
-
-        logger.info('Vonage API Key:', { vonageApiKey });
-        logger.info('Vonage API Secret:', { vonageApiSecret });
-
-        if (!vonageApiKey || !vonageApiSecret) {
-            logger.error('Vonage API credentials missing!', {
-                hasKey: !!vonageApiKey,
-                hasSecret: !!vonageApiSecret
-            });
-            return res.status(500).json({
-                success: false,
-                error: 'Vonage API credentials not configured'
-            });
-        }
-
-        logger.info(`Starting voice verification for ${phone} from client ${req.clientId}`, {
-            phone,
-            brand,
-            codeLength,
-            language,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        // Отправляем запрос на верификацию через Vonage Verify API
-        const response = await axios.get('https://api.nexmo.com/verify/json', {
-            params: {
-                api_key: vonageApiKey,
-                api_secret: vonageApiSecret,
-                number: phone,
-                brand: 'Verify',
-                code_length: codeLength,
-                'workflow[0][channel]': 'voice'
-            }
-        });
-
-        logger.info('Vonage Verify Voice API response:', {
-            status: response.status,
-            data: response.data,
-            phone,
-            clientId: req.clientId
-        });
-
-        if (response.data.status === '0') {
-            logger.info(`Voice verification started successfully`, {
-                requestId: response.data.request_id,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.json({
-                success: true,
-                message: 'Voice verification code sent successfully',
-                requestId: response.data.request_id,
-                status: response.data.status
-            });
-        } else {
-            logger.warn(`Voice verification failed`, {
-                status: response.data.status,
-                error: response.data.error_text,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.status(400).json({
-                success: false,
-                error: 'Failed to start voice verification',
-                status: response.data.status,
-                message: response.data.error_text
-            });
-        }
-
-    } catch (error) {
-        logger.error('Error starting voice verification:', {
-            error: error.message,
-            stack: error.stack,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to start voice verification',
-            message: error.message
-        });
-    }
-});
-
-// Отправка OTP через WhatsApp (Vonage Verify API)
-app.post('/api/vonage/verify-whatsapp', checkIPAccess, authenticateClient, async (req, res) => {
-    try {
-        // Валидация входных данных
-        const { error, value } = verifyWhatsAppSchema.validate(req.body);
-        if (error) {
-            logger.warn('Validation error in verify-whatsapp:', error.details);
-            return res.status(400).json({
-                success: false,
-                error: 'Validation error',
-                details: error.details.map(d => d.message)
-            });
-        }
-
-        const { phone, brand, codeLength, language } = value;
-        
-
-        // Используем переменные окружения
-        const vonageApiKey = process.env.VONAGE_API_KEY;
-        const vonageApiSecret = process.env.VONAGE_API_SECRET;
-
-        logger.info('Vonage API Key:', { vonageApiKey });
-        logger.info('Vonage API Secret:', { vonageApiSecret });
-
-        if (!vonageApiKey || !vonageApiSecret) {
-            logger.error('Vonage API credentials missing!', {
-                hasKey: !!vonageApiKey,
-                hasSecret: !!vonageApiSecret
-            });
-            return res.status(500).json({
-                success: false,
-                error: 'Vonage API credentials not configured'
-            });
-        }
-
-        logger.info(`Starting WhatsApp verification for ${phone} from client ${req.clientId}`, {
-            phone,
-            brand,
-            codeLength,
-            language,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        // Отправляем запрос на верификацию через Vonage Verify API
-        logger.info('Sending to Vonage API with keys:', {
-            api_key: vonageApiKey,
-            api_secret: vonageApiSecret
-        });
-        
-        const response = await axios.get('https://api.nexmo.com/verify/json', {
-            params: {
-                api_key: vonageApiKey,
-                api_secret: vonageApiSecret,
-                number: phone,
-                brand: 'Verify',
-                code_length: codeLength,
-                'workflow[0][channel]': 'whatsapp'
-            }
-        });
-
-        logger.info('Vonage Verify WhatsApp API response:', {
-            status: response.status,
-            data: response.data,
-            phone,
-            clientId: req.clientId
-        });
-
-        if (response.data.status === '0') {
-            logger.info(`WhatsApp verification started successfully`, {
-                requestId: response.data.request_id,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.json({
-                success: true,
-                message: 'WhatsApp verification code sent successfully',
-                requestId: response.data.request_id,
-                status: response.data.status
-            });
-        } else {
-            logger.warn(`WhatsApp verification failed`, {
-                status: response.data.status,
-                error: response.data.error_text,
-                phone,
-                clientId: req.clientId
-            });
-
-            res.status(400).json({
-                success: false,
-                error: 'Failed to start WhatsApp verification',
-                status: response.data.status,
-                message: response.data.error_text
-            });
-        }
-
-    } catch (error) {
-        logger.error('Error starting WhatsApp verification:', {
-            error: error.message,
-            stack: error.stack,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to start WhatsApp verification',
-            message: error.message
-        });
-    }
-});
-
-// Проверка кода верификации (общий для SMS, Voice и WhatsApp)
-app.post('/api/vonage/check-verify', checkIPAccess, authenticateClient, async (req, res) => {
-    try {
-        // Валидация входных данных
-        const { error, value } = checkVerifySchema.validate(req.body);
-        if (error) {
-            logger.warn('Validation error in check-verify:', error.details);
-            return res.status(400).json({
-                success: false,
-                error: 'Validation error',
-                details: error.details.map(d => d.message)
-            });
-        }
-
-        const { requestId, code } = value;
-
-        // Используем переменные окружения
-        const vonageApiKey = process.env.VONAGE_API_KEY;
-        const vonageApiSecret = process.env.VONAGE_API_SECRET;
-
-        logger.info('Vonage API Key:', { vonageApiKey });
-        logger.info('Vonage API Secret:', { vonageApiSecret });
-
-        if (!vonageApiKey || !vonageApiSecret) {
-            logger.error('Vonage API credentials missing!', {
-                hasKey: !!vonageApiKey,
-                hasSecret: !!vonageApiSecret
-            });
-            return res.status(500).json({
-                success: false,
-                error: 'Vonage API credentials not configured'
-            });
-        }
-
-        logger.info(`Checking verification code for request ${requestId}`, {
-            requestId,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        // Проверяем код через Vonage Verify API
-        const response = await axios.get('https://api.nexmo.com/verify/check/json', {
-            params: {
-                api_key: vonageApiKey,
-                api_secret: vonageApiSecret,
-                request_id: requestId,
-                code: code
-            }
-        });
-
-        logger.info('Vonage Verify Check API response:', {
-            status: response.status,
-            data: response.data,
-            requestId,
-            clientId: req.clientId
-        });
-
-        const isSuccess = response.data.status === '0';
-
-        if (isSuccess) {
-            logger.info(`Verification successful`, {
-                requestId,
-                clientId: req.clientId
-            });
-        } else {
-            logger.warn(`Verification failed`, {
-                status: response.data.status,
-                error: response.data.error_text,
-                requestId,
-                clientId: req.clientId
-            });
-        }
-
-        res.json({
-            success: isSuccess,
-            message: isSuccess ? 'Verification successful' : 'Verification failed',
-            status: response.data.status,
-            requestId: requestId,
-            errorText: response.data.error_text
-        });
-
-    } catch (error) {
-        logger.error('Error checking verification:', {
-            error: error.message,
-            stack: error.stack,
-            clientId: req.clientId,
-            ip: req.clientIP || req.ip
-        });
-
-        res.status(500).json({
-            success: false,
-            error: 'Failed to check verification',
-            message: error.message
-        });
-    }
-});
 
 // Проверка статуса SMS
 app.get('/api/vonage/sms-status/:messageId', checkIPAccess, authenticateClient, async (req, res) => {
