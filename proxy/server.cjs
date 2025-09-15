@@ -243,7 +243,7 @@ const verifyWhatsAppSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
+    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
 });
 
 const checkVerifySchema = Joi.object({
@@ -360,8 +360,6 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
 
         const { phone, brand, codeLength, language } = value;
         
-        // Принудительно устанавливаем английский язык, если передан русский
-        const finalLanguage = language === 'ru' ? 'en' : language;
 
         // Используем переменные окружения
         const vonageApiKey = process.env.VONAGE_API_KEY;
@@ -385,7 +383,7 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
             phone,
             brand,
             codeLength,
-            language: finalLanguage,
+            language,
             clientId: req.clientId,
             ip: req.clientIP || req.ip
         });
@@ -475,8 +473,6 @@ app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (r
 
         const { phone, brand, codeLength, language } = value;
         
-        // Принудительно устанавливаем английский язык, если передан русский
-        const finalLanguage = language === 'ru' ? 'en' : language;
 
         // Используем переменные окружения
         const vonageApiKey = process.env.VONAGE_API_KEY;
@@ -585,8 +581,6 @@ app.post('/api/vonage/verify-whatsapp', checkIPAccess, authenticateClient, async
 
         const { phone, brand, codeLength, language } = value;
         
-        // Принудительно устанавливаем английский язык, если передан русский
-        const finalLanguage = language === 'ru' ? 'en' : language;
 
         // Используем переменные окружения
         const vonageApiKey = process.env.VONAGE_API_KEY;
