@@ -250,7 +250,7 @@ app.get('/api/health', checkIPAccess, authenticateClient, (req, res) => {
 // Webhook endpoint для получения статуса и стоимости SMS от Vonage (GET с параметрами)
 app.get('/webhook/vonage-sms-status', (req, res) => {
     try {
-        const { msisdn, to, network_code, 'network-code': networkCodeAlt, messageId } = req.query;
+        const { msisdn, to, network_code, 'network-code': networkCodeAlt, messageId, price } = req.query;
         const networkCode = network_code || networkCodeAlt;
         
         logger.info('Received Vonage SMS webhook (GET):', {
@@ -258,6 +258,7 @@ app.get('/webhook/vonage-sms-status', (req, res) => {
             to,
             networkCode,
             messageId,
+            price,
             query: req.query
         });
 
@@ -267,7 +268,7 @@ app.get('/webhook/vonage-sms-status', (req, res) => {
                 messageId: messageId,
                 phone: `+${msisdn}`,
                 cost: {
-                    amount: '0.045', // Примерная стоимость, так как в GET нет usage
+                    amount: price || '0.12', // Реальная стоимость от Vonage или fallback
                     currency: 'EUR'
                 },
                 status: 'delivered',
