@@ -216,7 +216,7 @@ const sendSmsSchema = Joi.object({
 const sendVoiceSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     code: Joi.string().pattern(/^\d{4,8}$/).required(),
-    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
+    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
 });
 
 const sendWhatsAppSchema = Joi.object({
@@ -229,21 +229,21 @@ const verifySmsSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
+    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
 });
 
 const verifyVoiceSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
+    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
 });
 
 const verifyWhatsAppSchema = Joi.object({
     phone: Joi.string().pattern(/^\+\d{10,15}$/).required(),
     brand: Joi.string().min(1).max(20).optional(),
     codeLength: Joi.number().min(4).max(10).default(6),
-    language: Joi.string().valid('en', 'es', 'fr', 'de').default('en')
+    language: Joi.string().valid('ru', 'en', 'es', 'fr', 'de').default('en')
 });
 
 const checkVerifySchema = Joi.object({
