@@ -386,16 +386,16 @@ app.post('/api/vonage/verify-sms', checkIPAccess, authenticateClient, async (req
             api_secret: vonageApiSecret
         });
         
-        const response = await axios.post('https://api.nexmo.com/verify/json', {
-            api_key: vonageApiKey,
-            api_secret: vonageApiSecret,
-            number: phone,
-            brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
-            code_length: codeLength,
-            lg: language,
-            workflow: [
-                { channel: 'sms' }
-            ]
+        const response = await axios.get('https://api.nexmo.com/verify/json', {
+            params: {
+                api_key: vonageApiKey,
+                api_secret: vonageApiSecret,
+                number: phone,
+                brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
+                code_length: codeLength,
+                lg: language,
+                'workflow[0][channel]': 'sms'
+            }
         });
 
         logger.info('Vonage Verify SMS API response:', {
@@ -494,16 +494,16 @@ app.post('/api/vonage/verify-voice', checkIPAccess, authenticateClient, async (r
         });
 
         // Отправляем запрос на верификацию через Vonage Verify API
-        const response = await axios.post('https://api.nexmo.com/verify/json', {
-            api_key: vonageApiKey,
-            api_secret: vonageApiSecret,
-            number: phone,
-            brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
-            code_length: codeLength,
-            lg: language,
-            workflow: [
-                { channel: 'voice' }
-            ]
+        const response = await axios.get('https://api.nexmo.com/verify/json', {
+            params: {
+                api_key: vonageApiKey,
+                api_secret: vonageApiSecret,
+                number: phone,
+                brand: brand || process.env.VONAGE_SENDER || 'VerifyBox',
+                code_length: codeLength,
+                lg: language,
+                'workflow[0][channel]': 'voice'
+            }
         });
 
         logger.info('Vonage Verify Voice API response:', {
@@ -599,11 +599,13 @@ app.post('/api/vonage/check-verify', checkIPAccess, authenticateClient, async (r
         });
 
         // Проверяем код через Vonage Verify API
-        const response = await axios.post('https://api.nexmo.com/verify/check/json', {
-            api_key: vonageApiKey,
-            api_secret: vonageApiSecret,
-            request_id: requestId,
-            code: code
+        const response = await axios.get('https://api.nexmo.com/verify/check/json', {
+            params: {
+                api_key: vonageApiKey,
+                api_secret: vonageApiSecret,
+                request_id: requestId,
+                code: code
+            }
         });
 
         logger.info('Vonage Verify Check API response:', {
