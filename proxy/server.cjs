@@ -7,6 +7,10 @@ const winston = require('winston');
 const path = require('path');
 const axios = require('axios');
 require('dotenv').config();
+console.log('=== ENV DEBUG ===');
+console.log('VONAGE_API_KEY:', process.env.VONAGE_API_KEY ? 'LOADED' : 'NOT LOADED');
+console.log('VONAGE_API_SECRET:', process.env.VONAGE_API_SECRET ? 'LOADED' : 'NOT LOADED');
+console.log('================');
 
 // Настройка логгера
 const logger = winston.createLogger({
